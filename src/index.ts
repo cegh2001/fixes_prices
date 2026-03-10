@@ -117,7 +117,7 @@ app.post('/round', async (c) => {
         responseMimeType: 'application/json',
         responseSchema: roundingSchema,
         thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MEDIUM,
+          thinkingLevel: ThinkingLevel.LOW,
         },
       },
     });
