@@ -16,7 +16,11 @@ const roundingSchema = {
   type: Type.OBJECT,
   properties: {
     original:           { type: Type.NUMBER,  description: 'El número original recibido' },
-    rounded_5_decimals: { type: Type.NUMBER,  description: 'Número redondeado a 5 decimales' },
+    rounded_9_decimals: { type: Type.NUMBER,  description: 'Número redondeado a 9 decimales' },
+    rounded_8_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 8 decimales' },
+    rounded_7_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 7 decimales' },
+    rounded_6_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 6 decimales' },
+    rounded_5_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 5 decimales' },
     rounded_4_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 4 decimales' },
     rounded_3_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 3 decimales' },
     rounded_2_decimals: { type: Type.NUMBER,  description: 'Resultado anterior redondeado a 2 decimales' },
@@ -25,6 +29,10 @@ const roundingSchema = {
   },
   required: [
     'original',
+    'rounded_9_decimals',
+    'rounded_8_decimals',
+    'rounded_7_decimals',
+    'rounded_6_decimals',
     'rounded_5_decimals',
     'rounded_4_decimals',
     'rounded_3_decimals',
@@ -44,17 +52,25 @@ REGLAS:
 
 PASOS:
 1. original = ${value}
-2. rounded_5_decimals = redondear original a 5 decimales
-3. rounded_4_decimals = redondear rounded_5_decimals a 4 decimales
-4. rounded_3_decimals = redondear rounded_4_decimals a 3 decimales
-5. rounded_2_decimals = redondear rounded_3_decimals a 2 decimales
-6. rounded_1_decimal  = redondear rounded_2_decimals a 1 decimal
-7. rounded_integer    = redondear rounded_1_decimal al entero más cercano
+2. rounded_9_decimals = redondear original a 9 decimales
+3. rounded_8_decimals = redondear rounded_9_decimals a 8 decimales
+4. rounded_7_decimals = redondear rounded_8_decimals a 7 decimales
+5. rounded_6_decimals = redondear rounded_7_decimals a 6 decimales
+6. rounded_5_decimals = redondear rounded_6_decimals a 5 decimales
+7. rounded_4_decimals = redondear rounded_5_decimals a 4 decimales
+8. rounded_3_decimals = redondear rounded_4_decimals a 3 decimales
+9. rounded_2_decimals = redondear rounded_3_decimals a 2 decimales
+10. rounded_1_decimal  = redondear rounded_2_decimals a 1 decimal
+11. rounded_integer    = redondear rounded_1_decimal al entero más cercano
 
 Ejemplo verificado:
-- original: 345.44471
-- rounded_5_decimals: 345.44471
-- rounded_4_decimals: 345.4447 (1 < 5, baja)
+- original: 345.444714567
+- rounded_9_decimals: 345.444714567
+- rounded_8_decimals: 345.44471457 (7 >= 5, sube)
+- rounded_7_decimals: 345.4447146 (7 >= 5, sube)
+- rounded_6_decimals: 345.444715 (6 >= 5, sube)
+- rounded_5_decimals: 345.44472 (5 >= 5, sube)
+- rounded_4_decimals: 345.4447 (2 < 5, baja)
 - rounded_3_decimals: 345.445 (7 >= 5, sube)
 - rounded_2_decimals: 345.45 (5 >= 5, sube)
 - rounded_1_decimal: 345.5 (5 >= 5, sube)
@@ -66,6 +82,10 @@ Devuelve SOLO el JSON con los resultados numéricos.`;
 // ── Interfaces ─────────────────────────────────────────────────
 interface RoundingResult {
   original: number;
+  rounded_9_decimals: number;
+  rounded_8_decimals: number;
+  rounded_7_decimals: number;
+  rounded_6_decimals: number;
   rounded_5_decimals: number;
   rounded_4_decimals: number;
   rounded_3_decimals: number;
