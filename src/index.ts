@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
 
 const app = new Hono();
 app.use('*', cors());
@@ -117,7 +117,7 @@ app.post('/round', async (c) => {
         responseMimeType: 'application/json',
         responseSchema: roundingSchema,
         thinkingConfig: {
-          thinkingLevel: 'low',
+          thinkingLevel: ThinkingLevel.MEDIUM,
         },
       },
     });
