@@ -83,11 +83,12 @@ Devuelve SOLO el JSON con los resultados numéricos.`;
 const decimalRoundingSchema = {
   type: Type.OBJECT,
   properties: {
-    original:        { type: Type.NUMBER,  description: 'El número original recibido' },
-    rounded:         { type: Type.NUMBER,  description: 'Resultado del redondeo en cascada hasta el decimal especificado' },
-    rounded_integer: { type: Type.INTEGER, description: 'rounded redondeado al entero más cercano' },
+    original:                { type: Type.NUMBER,  description: 'El número original recibido' },
+    rounded:                 { type: Type.NUMBER,  description: 'Resultado del redondeo en cascada hasta el decimal especificado' },
+    rounded_at_prev_level:   { type: Type.NUMBER,  description: 'Resultado del redondeo en cascada hasta (decimal - 1)' },
+    rounded_integer:         { type: Type.INTEGER, description: 'rounded redondeado al entero más cercano' },
   },
-  required: ['original', 'rounded', 'rounded_integer'],
+  required: ['original', 'rounded', 'rounded_at_prev_level', 'rounded_integer'],
 };
 
 // Prompt para modo decimal
@@ -100,8 +101,14 @@ function buildDecimalPrompt(value: string, decimal: number): string {
     prev = `temp_${d}`;
     step++;
   }
+  const prevLevel = decimal - 1;
   lines.push(`${step}. rounded = ${prev}  ← resultado final a ${decimal} decimales`);
-  lines.push(`${step + 1}. rounded_integer = redondear rounded al entero más cercano`);
+  if (prevLevel > 0) {
+    lines.push(`${step + 1}. rounded_at_prev_level = redondear rounded a ${prevLevel} decimal${prevLevel === 1 ? '' : 'es'}  ← máximo sin bajar`);
+  } else {
+    lines.push(`${step + 1}. rounded_at_prev_level = redondear rounded al entero más cercano  ← máximo sin bajar`);
+  }
+  lines.push(`${step + 2}. rounded_integer = redondear rounded al entero más cercano`);
 
   return `Eres una calculadora de precisión. Dado el número ${value}, realiza el redondeo EN CASCADA de 9 decimales hasta ${decimal} decimal${decimal === 1 ? '' : 'es'}.
 
@@ -112,7 +119,7 @@ REGLAS:
 PASOS:
 ${lines.join('\n')}
 
-Devuelve SOLO el JSON con los campos: original, rounded, rounded_integer.`;
+Devuelve SOLO el JSON con los campos: original, rounded, rounded_at_prev_level, rounded_integer.`;
 }
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -133,6 +140,7 @@ interface RoundingResult {
 interface DecimalRoundingResult {
   original: number;
   rounded: number;
+  rounded_at_prev_level: number;
   rounded_integer: number;
 }
 
@@ -205,7 +213,7 @@ app.post('/round', async (c) => {
       return c.json({
         original: result.original,
         rounded: result.rounded.toFixed(decimalPlaces),
-        full_rounded: result.rounded_integer.toFixed(decimalPlaces),
+        full_rounded: result.rounded_at_prev_level.toFixed(decimalPlaces),
         rounded_integer: result.rounded_integer,
       });
     }
