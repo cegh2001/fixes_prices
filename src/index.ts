@@ -158,6 +158,58 @@ interface DecimalRoundingResult {
   rounded_integer: number;
 }
 
+interface RoundingStringResponse {
+  original: string;
+  rounded_9_decimals: string;
+  rounded_8_decimals: string;
+  rounded_7_decimals: string;
+  rounded_6_decimals: string;
+  rounded_5_decimals: string;
+  rounded_4_decimals: string;
+  rounded_3_decimals: string;
+  rounded_2_decimals: string;
+  rounded_1_decimal: string;
+  rounded_integer: string;
+}
+
+interface DecimalRoundingStringResponse {
+  original: string;
+  rounded: string;
+  full_rounded: string;
+  rounded_integer: string;
+}
+
+function toCompleteStringResponse(result: RoundingResult): RoundingStringResponse {
+  return {
+    original: result.original.toString(),
+    rounded_9_decimals: result.rounded_9_decimals.toFixed(9),
+    rounded_8_decimals: result.rounded_8_decimals.toFixed(8),
+    rounded_7_decimals: result.rounded_7_decimals.toFixed(7),
+    rounded_6_decimals: result.rounded_6_decimals.toFixed(6),
+    rounded_5_decimals: result.rounded_5_decimals.toFixed(5),
+    rounded_4_decimals: result.rounded_4_decimals.toFixed(4),
+    rounded_3_decimals: result.rounded_3_decimals.toFixed(3),
+    rounded_2_decimals: result.rounded_2_decimals.toFixed(2),
+    // Requisito de negocio: siempre representar este paso con 2 decimales.
+    rounded_1_decimal: result.rounded_1_decimal.toFixed(2),
+    rounded_integer: result.rounded_integer.toString(),
+  };
+}
+
+function toDecimalStringResponse(
+  originalInput: string,
+  result: DecimalRoundingResult,
+  fullRoundedValue: number,
+  decimalPlaces: number,
+): DecimalRoundingStringResponse {
+  return {
+    original: originalInput,
+    rounded: result.rounded.toFixed(decimalPlaces),
+    full_rounded: fullRoundedValue.toFixed(decimalPlaces),
+    rounded_integer: result.rounded_integer.toString(),
+  };
+}
+
 // ── Routes ─────────────────────────────────────────────────────
 
 app.get('/', (c) =>
@@ -225,12 +277,7 @@ app.post('/round', async (c) => {
 
       const result: DecimalRoundingResult = JSON.parse(text);
       const fullRoundedValue = computeFullRounded(result.rounded, decimalPlaces);
-      return c.json({
-        original: result.original,
-        rounded: result.rounded.toFixed(decimalPlaces),
-        full_rounded: fullRoundedValue.toFixed(decimalPlaces),
-        rounded_integer: result.rounded_integer,
-      });
+      return c.json(toDecimalStringResponse(numStr, result, fullRoundedValue, decimalPlaces));
     }
 
     // Modo completo (comportamiento original)
@@ -252,7 +299,7 @@ app.post('/round', async (c) => {
     }
 
     const result: RoundingResult = JSON.parse(text);
-    return c.json(result);
+    return c.json(toCompleteStringResponse(result));
   } catch (err) {
     console.error('[round] Error Gemini:', err);
     const message = err instanceof Error ? err.message : 'Error desconocido';
