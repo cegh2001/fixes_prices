@@ -79,6 +79,42 @@ Ejemplo verificado:
 Devuelve SOLO el JSON con los resultados numéricos.`;
 }
 
+// Schema para modo decimal (cascade 9 → decimal especificado)
+const decimalRoundingSchema = {
+  type: Type.OBJECT,
+  properties: {
+    original:        { type: Type.NUMBER,  description: 'El número original recibido' },
+    rounded:         { type: Type.NUMBER,  description: 'Resultado del redondeo en cascada hasta el decimal especificado' },
+    rounded_integer: { type: Type.INTEGER, description: 'rounded redondeado al entero más cercano' },
+  },
+  required: ['original', 'rounded', 'rounded_integer'],
+};
+
+// Prompt para modo decimal
+function buildDecimalPrompt(value: string, decimal: number): string {
+  const lines: string[] = [`1. original = ${value}`];
+  let prev = 'original';
+  let step = 2;
+  for (let d = 9; d >= decimal; d--) {
+    lines.push(`${step}. temp_${d} = redondear ${prev} a ${d} decimales`);
+    prev = `temp_${d}`;
+    step++;
+  }
+  lines.push(`${step}. rounded = ${prev}  ← resultado final a ${decimal} decimales`);
+  lines.push(`${step + 1}. rounded_integer = redondear rounded al entero más cercano`);
+
+  return `Eres una calculadora de precisión. Dado el número ${value}, realiza el redondeo EN CASCADA de 9 decimales hasta ${decimal} decimal${decimal === 1 ? '' : 'es'}.
+
+REGLAS:
+- Redondeo estándar: si el dígito siguiente es >= 5, se redondea hacia ARRIBA; si < 5, hacia ABAJO.
+- Cada paso usa el RESULTADO del paso anterior, NO el número original.
+
+PASOS:
+${lines.join('\n')}
+
+Devuelve SOLO el JSON con los campos: original, rounded, rounded_integer.`;
+}
+
 // ── Interfaces ─────────────────────────────────────────────────
 interface RoundingResult {
   original: number;
@@ -91,6 +127,12 @@ interface RoundingResult {
   rounded_3_decimals: number;
   rounded_2_decimals: number;
   rounded_1_decimal: number;
+  rounded_integer: number;
+}
+
+interface DecimalRoundingResult {
+  original: number;
+  rounded: number;
   rounded_integer: number;
 }
 
@@ -111,14 +153,14 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 
 app.post('/round', async (c) => {
   // ─ Validar input ─
-  let body: { value?: unknown };
+  let body: { value?: unknown; decimal?: unknown };
   try {
     body = await c.req.json();
   } catch {
     return c.json({ error: 'Body JSON inválido' }, 400);
   }
 
-  const { value } = body;
+  const { value, decimal } = body;
   if (value === undefined || value === null) {
     return c.json({ error: 'Se requiere el campo "value" (number o string)' }, 400);
   }
@@ -128,8 +170,46 @@ app.post('/round', async (c) => {
     return c.json({ error: `"${value}" no es un número válido` }, 400);
   }
 
+  // ─ Validar decimal (opcional) ─
+  let decimalPlaces: number | undefined;
+  if (decimal !== undefined && decimal !== null) {
+    const d = Number(decimal);
+    if (!Number.isInteger(d) || d < 1 || d > 9) {
+      return c.json({ error: '"decimal" debe ser un entero entre 1 y 9' }, 400);
+    }
+    decimalPlaces = d;
+  }
+
   // ─ Llamar a Gemini con structured output ─
   try {
+    if (decimalPlaces !== undefined) {
+      // Modo decimal: cascade de 9 hasta decimalPlaces
+      const response = await ai.models.generateContent({
+        model: MODEL,
+        contents: buildDecimalPrompt(numStr, decimalPlaces),
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: decimalRoundingSchema,
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.LOW,
+          },
+        },
+      });
+
+      const text = response.text;
+      if (!text) {
+        return c.json({ error: 'Respuesta vacía de Gemini' }, 502);
+      }
+
+      const result: DecimalRoundingResult = JSON.parse(text);
+      return c.json({
+        original: result.original,
+        rounded: result.rounded.toFixed(decimalPlaces),
+        rounded_integer: result.rounded_integer,
+      });
+    }
+
+    // Modo completo (comportamiento original)
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: buildPrompt(numStr),
