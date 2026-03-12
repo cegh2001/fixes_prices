@@ -205,6 +205,7 @@ app.post('/round', async (c) => {
       return c.json({
         original: result.original,
         rounded: result.rounded.toFixed(decimalPlaces),
+        full_rounded: result.rounded_integer.toFixed(decimalPlaces),
         rounded_integer: result.rounded_integer,
       });
     }
